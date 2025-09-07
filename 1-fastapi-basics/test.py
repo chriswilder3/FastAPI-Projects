@@ -1,20 +1,31 @@
-from typing import Union
-from fastapi import FastAPI
-from pydantic import BaseModel
+from typing import Dict, List, Optional
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel, Field
+from threading import Lock
 
-app = FastAPI()
+app = FastAPI(title="Items API", version="1.0")
+
+class ItemCreate(BaseModel):
+    name : str = Field(...,min_length=2)
+    price : float = Field(...,ge=0)
+    is_5g : Optional[bool] = None
 
 class Item(BaseModel):
     item_id : int
-    name : str
-    price : float
-    is_5g : Union[bool, None] = None
+    
+items :Dict[int,Item] = dict()
+_next_id = 1
+_store_lock = Lock()
 
-items :dict[int:Item] = dict()
-
-@app.get("/")
+@app.get("/api/v1/", tags=['health'])
 def home():
-    return {"msg":" Welcome to Test FastAPI! "}
+    return {"message":" Welcome to Test FastAPI! "}
+
+@app.get("/api/v1/items", response_model=Item)
+def get_all_items():
+    # Return a list rather than a raw dict for easier client consumption
+    return list(items.values())
+
 
 @app.get("/items/{item_id}")
 def get_item(item_id:int):
